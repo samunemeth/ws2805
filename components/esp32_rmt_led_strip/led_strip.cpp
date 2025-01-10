@@ -123,17 +123,18 @@ void ESP32RMTLEDStripLightOutput::write_state(light::LightState *state) {
     size++;
     psrc++;
   }
-  psrc -= 8;
+  // psrc -= 8;
   size -= 8;
   while (size < buffer_size) {
-    uint8_t b = *psrc;
+    // uint8_t b = *psrc;
     for (int i = 0; i < 8; i++) {
-      pdest->val = b & (1 << (7 - i)) ? this->bit1_.val : this->bit0_.val;
+      // pdest->val = b & (1 << (7 - i)) ? this->bit1_.val : this->bit0_.val;
+      pdest->val = this->bit0_.val;
       pdest++;
       len++;
     }
     size++;
-    psrc++;
+    // psrc++;
   }
 
   if (this->reset_.duration0 > 0 || this->reset_.duration1 > 0) {
