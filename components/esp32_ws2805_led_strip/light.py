@@ -81,7 +81,7 @@ CONFIG_SCHEMA = cv.All(
                 esp32_s2_idf=64,
                 esp32_s3_idf=48,
                 esp32_c3_idf=48,
-                esp32_c6_idf=48,
+                # esp32_c6_idf=48,
                 esp32_h2_idf=48,
             ): cv.All(cv.only_with_esp_idf, cv.int_range(min=2)),
             cv.Optional(CONF_MAX_REFRESH_RATE): cv.positive_time_period_microseconds,
