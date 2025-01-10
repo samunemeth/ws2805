@@ -4,3 +4,13 @@ external_components:
   - source: github://samunemeth/ws2805
     components: [ ws2805 ]
     refresh: 5min
+
+light:
+  - platform: esp32_rmt_led_strip
+    name: "Light Test"
+    pin: GPIOXX
+    chipset: WS2805
+    rgb_order: RGB
+    is_rgbw: True
+    num_leds: 20
+    rmt_channel: 0
