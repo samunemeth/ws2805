@@ -42,3 +42,7 @@ For a full implementation however, big changes to the light component
 
 The `RGBWW` components code can also help to implement the
 management of white channels.
+
+## Resources and other implementations
+
+  - [Other (crude) ESPHome implementation](https://github.com/irike1/esphome_ws2805/)
