@@ -9,15 +9,15 @@
 #include <esp_attr.h>
 
 namespace esphome {
-namespace esp32_ws2805_led_strip {
+namespace esp32_rmt_led_strip {
 
-static const char *const TAG = "esp32_ws2805_led_strip";
+static const char *const TAG = "esp32_rmt_led_strip";
 
 static const uint32_t RMT_CLK_FREQ = 80000000;
 
 static const uint8_t RMT_CLK_DIV = 2;
 
-void ESP32WS2805LEDStripLightOutput::setup() {
+void ESP32RMTLEDStripLightOutput::setup() {
   ESP_LOGCONFIG(TAG, "Setting up ESP32 LED Strip...");
 
   size_t buffer_size = this->get_buffer_size_();
@@ -66,7 +66,7 @@ void ESP32WS2805LEDStripLightOutput::setup() {
   }
 }
 
-void ESP32WS2805LEDStripLightOutput::set_led_params(uint32_t bit0_high, uint32_t bit0_low, uint32_t bit1_high,
+void ESP32RMTLEDStripLightOutput::set_led_params(uint32_t bit0_high, uint32_t bit0_low, uint32_t bit1_high,
                                                  uint32_t bit1_low, uint32_t reset_time_high, uint32_t reset_time_low) {
   float ratio = (float) RMT_CLK_FREQ / RMT_CLK_DIV / 1e09f;
 
@@ -87,7 +87,7 @@ void ESP32WS2805LEDStripLightOutput::set_led_params(uint32_t bit0_high, uint32_t
   this->reset_.level1 = 0;
 }
 
-void ESP32WS2805LEDStripLightOutput::write_state(light::LightState *state) {
+void ESP32RMTLEDStripLightOutput::write_state(light::LightState *state) {
   // protect from refreshing too often
   uint32_t now = micros();
   if (*this->max_refresh_rate_ != 0 && (now - this->last_refresh_) < *this->max_refresh_rate_) {
@@ -123,6 +123,18 @@ void ESP32WS2805LEDStripLightOutput::write_state(light::LightState *state) {
     size++;
     psrc++;
   }
+  psrc -= 8;
+  size -= 8;
+  while (size < buffer_size) {
+    uint8_t b = *psrc;
+    for (int i = 0; i < 8; i++) {
+      pdest->val = b & (1 << (7 - i)) ? this->bit1_.val : this->bit0_.val;
+      pdest++;
+      len++;
+    }
+    size++;
+    psrc++;
+  }
 
   if (this->reset_.duration0 > 0 || this->reset_.duration1 > 0) {
     pdest->val = this->reset_.val;
@@ -138,7 +150,7 @@ void ESP32WS2805LEDStripLightOutput::write_state(light::LightState *state) {
   this->status_clear_warning();
 }
 
-light::ESPColorView ESP32WS2805LEDStripLightOutput::get_view_internal(int32_t index) const {
+light::ESPColorView ESP32RMTLEDStripLightOutput::get_view_internal(int32_t index) const {
   int32_t r = 0, g = 0, b = 0;
   switch (this->rgb_order_) {
     case ORDER_RGB:
@@ -172,20 +184,18 @@ light::ESPColorView ESP32WS2805LEDStripLightOutput::get_view_internal(int32_t in
       b = 0;
       break;
   }
-  uint8_t multiplier = 5;
-  uint8_t cold = 3;
-  uint8_t warm = 4;
+  uint8_t multiplier = this->is_rgbw_ || this->is_wrgb_ ? 4 : 3;
+  uint8_t white = this->is_wrgb_ ? 0 : 3;
 
-  return {this->buf_ + (index * multiplier) + r,
-          this->buf_ + (index * multiplier) + g,
-          this->buf_ + (index * multiplier) + b,
-          this->buf_ + (index * multiplier) + cold,
-          this->buf_ + (index * multiplier) + warm,
+  return {this->buf_ + (index * multiplier) + r + this->is_wrgb_,
+          this->buf_ + (index * multiplier) + g + this->is_wrgb_,
+          this->buf_ + (index * multiplier) + b + this->is_wrgb_,
+          this->is_rgbw_ || this->is_wrgb_ ? this->buf_ + (index * multiplier) + white : nullptr,
           &this->effect_data_[index],
           &this->correction_};
 }
 
-void ESP32WS2805LEDStripLightOutput::dump_config() {
+void ESP32RMTLEDStripLightOutput::dump_config() {
   ESP_LOGCONFIG(TAG, "ESP32 RMT LED Strip:");
   ESP_LOGCONFIG(TAG, "  Pin: %u", this->pin_);
   ESP_LOGCONFIG(TAG, "  Channel: %u", this->channel_);
@@ -218,9 +228,9 @@ void ESP32WS2805LEDStripLightOutput::dump_config() {
   ESP_LOGCONFIG(TAG, "  Number of LEDs: %u", this->num_leds_);
 }
 
-float ESP32WS2805LEDStripLightOutput::get_setup_priority() const { return setup_priority::HARDWARE; }
+float ESP32RMTLEDStripLightOutput::get_setup_priority() const { return setup_priority::HARDWARE; }
 
-}  // namespace esp32_ws2805_led_strip
+}  // namespace esp32_rmt_led_strip
 }  // namespace esphome
 
 #endif  // USE_ESP32

@@ -1,5 +1,5 @@
 #pragma once
-#define USE_ESP32
+
 #ifdef USE_ESP32
 
 #include "esphome/components/light/addressable_light.h"
@@ -13,7 +13,7 @@
 #include <esp_err.h>
 
 namespace esphome {
-namespace esp32_ws2805_led_strip {
+namespace esp32_rmt_led_strip {
 
 enum RGBOrder : uint8_t {
   ORDER_RGB,
@@ -24,7 +24,7 @@ enum RGBOrder : uint8_t {
   ORDER_BRG,
 };
 
-class ESP32WS2805LEDStripLightOutput : public light::AddressableLight {
+class ESP32RMTLEDStripLightOutput : public light::AddressableLight {
  public:
   void setup() override;
   void write_state(light::LightState *state) override;
@@ -33,12 +33,18 @@ class ESP32WS2805LEDStripLightOutput : public light::AddressableLight {
   int32_t size() const override { return this->num_leds_; }
   light::LightTraits get_traits() override {
     auto traits = light::LightTraits();
-    traits.set_supported_color_modes({light::ColorMode::RGB_COLD_WARM_WHITE});
+    if (this->is_rgbw_ || this->is_wrgb_) {
+      traits.set_supported_color_modes({light::ColorMode::RGB_WHITE, light::ColorMode::WHITE});
+    } else {
+      traits.set_supported_color_modes({light::ColorMode::RGB});
+    }
     return traits;
   }
 
   void set_pin(uint8_t pin) { this->pin_ = pin; }
   void set_num_leds(uint16_t num_leds) { this->num_leds_ = num_leds; }
+  void set_is_rgbw(bool is_rgbw) { this->is_rgbw_ = is_rgbw; }
+  void set_is_wrgb(bool is_wrgb) { this->is_wrgb_ = is_wrgb; }
   void set_use_psram(bool use_psram) { this->use_psram_ = use_psram; }
 
   /// Set a maximum refresh rate in µs as some lights do not like being updated too often.
@@ -60,7 +66,7 @@ class ESP32WS2805LEDStripLightOutput : public light::AddressableLight {
  protected:
   light::ESPColorView get_view_internal(int32_t index) const override;
 
-  size_t get_buffer_size_() const { return this->num_leds_ * 5; }
+  size_t get_buffer_size_() const { return this->num_leds_ * (this->is_rgbw_ || this->is_wrgb_ ? 4 : 3); }
 
   uint8_t *buf_{nullptr};
   uint8_t *effect_data_{nullptr};
@@ -68,6 +74,8 @@ class ESP32WS2805LEDStripLightOutput : public light::AddressableLight {
 
   uint8_t pin_;
   uint16_t num_leds_;
+  bool is_rgbw_;
+  bool is_wrgb_;
   bool use_psram_;
 
   rmt_item32_t bit0_, bit1_, reset_;
@@ -78,7 +86,7 @@ class ESP32WS2805LEDStripLightOutput : public light::AddressableLight {
   optional<uint32_t> max_refresh_rate_{};
 };
 
-}  // namespace esp32_ws2805_led_strip
+}  // namespace esp32_rmt_led_strip
 }  // namespace esphome
 
 #endif  // USE_ESP32

@@ -6,6 +6,7 @@ from esphome.components import esp32_rmt, light
 import esphome.config_validation as cv
 from esphome.const import (
     CONF_CHIPSET,
+    CONF_IS_RGBW,
     CONF_MAX_REFRESH_RATE,
     CONF_NUM_LEDS,
     CONF_OUTPUT_ID,
@@ -14,17 +15,17 @@ from esphome.const import (
     CONF_RMT_CHANNEL,
 )
 
-CODEOWNERS = ["@samunemeth"]
+CODEOWNERS = ["@jesserockz"]
 DEPENDENCIES = ["esp32"]
 
-esp32_ws2805_led_strip_ns = cg.esphome_ns.namespace("esp32_ws2805_led_strip")
-ESP32WS2805LEDStripLightOutput = esp32_ws2805_led_strip_ns.class_(
-    "ESP32WS2805LEDStripLightOutput", light.AddressableLight
+esp32_rmt_led_strip_ns = cg.esphome_ns.namespace("esp32_rmt_led_strip")
+ESP32RMTLEDStripLightOutput = esp32_rmt_led_strip_ns.class_(
+    "ESP32RMTLEDStripLightOutput", light.AddressableLight
 )
 
 rmt_channel_t = cg.global_ns.enum("rmt_channel_t")
 
-RGBOrder = esp32_ws2805_led_strip_ns.enum("RGBOrder")
+RGBOrder = esp32_rmt_led_strip_ns.enum("RGBOrder")
 
 RGB_ORDERS = {
     "RGB": RGBOrder.ORDER_RGB,
@@ -47,7 +48,11 @@ class LEDStripTimings:
 
 
 CHIPSETS = {
-    "WS2805": LEDStripTimings(300, 750, 750, 750, 0, 300000),
+    "WS2811": LEDStripTimings(300, 1090, 1090, 320, 0, 300000),
+    "WS2812": LEDStripTimings(400, 1000, 1000, 400, 0, 0),
+    "SK6812": LEDStripTimings(300, 900, 600, 600, 0, 0),
+    "APA106": LEDStripTimings(350, 1360, 1360, 350, 0, 0),
+    "SM16703": LEDStripTimings(300, 900, 900, 300, 0, 0),
 }
 
 CONF_USE_PSRAM = "use_psram"
@@ -63,13 +68,15 @@ CONF_RESET_LOW = "reset_low"
 CONFIG_SCHEMA = cv.All(
     light.ADDRESSABLE_LIGHT_SCHEMA.extend(
         {
-            cv.GenerateID(CONF_OUTPUT_ID): cv.declare_id(ESP32WS2805LEDStripLightOutput),
+            cv.GenerateID(CONF_OUTPUT_ID): cv.declare_id(ESP32RMTLEDStripLightOutput),
             cv.Required(CONF_PIN): pins.internal_gpio_output_pin_number,
             cv.Required(CONF_NUM_LEDS): cv.positive_not_null_int,
             cv.Required(CONF_RGB_ORDER): cv.enum(RGB_ORDERS, upper=True),
             cv.Required(CONF_RMT_CHANNEL): esp32_rmt.validate_rmt_channel(tx=True),
             cv.Optional(CONF_MAX_REFRESH_RATE): cv.positive_time_period_microseconds,
             cv.Optional(CONF_CHIPSET): cv.one_of(*CHIPSETS, upper=True),
+            cv.Optional(CONF_IS_RGBW, default=False): cv.boolean,
+            cv.Optional(CONF_IS_WRGB, default=False): cv.boolean,
             cv.Optional(CONF_USE_PSRAM, default=True): cv.boolean,
             cv.Inclusive(
                 CONF_BIT0_HIGH,
@@ -137,6 +144,8 @@ async def to_code(config):
         )
 
     cg.add(var.set_rgb_order(config[CONF_RGB_ORDER]))
+    cg.add(var.set_is_rgbw(config[CONF_IS_RGBW]))
+    cg.add(var.set_is_wrgb(config[CONF_IS_WRGB]))
     cg.add(var.set_use_psram(config[CONF_USE_PSRAM]))
 
     cg.add(
