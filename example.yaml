@@ -1,0 +1,6 @@
+external_components:
+
+  # Use WS2805 component from custom repo
+  - source: github://samunemeth/ws2805
+    components: [ ws2805 ]
+    refresh: 5min

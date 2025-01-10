@@ -1,0 +1,1 @@
+Custom componenet for WS2805 LED strips.
